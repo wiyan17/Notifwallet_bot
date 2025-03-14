@@ -1,11 +1,8 @@
 import threading
 import time
-import asyncio
 import os
 from web3 import Web3
 import telebot
-from solana.rpc.websocket_api import connect
-from solana.publickey import PublicKey
 from dotenv import load_dotenv
 
 # Load environment variables dari file .env
@@ -54,12 +51,8 @@ wallet_addresses = {
     "Ethereum": [],
     "BSC": [],
     "Arbitrum": [],
-    "Base": [],
-    "Solana": []
+    "Base": []
 }
-
-# Untuk Solana, simpan thread monitoring per wallet
-solana_threads = {}
 
 ###############################
 # Fungsi Monitoring Jaringan EVM
@@ -93,32 +86,6 @@ def monitor_network(network_name, rpc_url):
                 time.sleep(5)
         else:
             time.sleep(5)
-
-###############################
-# Fungsi Monitoring Jaringan Solana
-###############################
-
-async def monitor_solana(account_pubkey_str):
-    solana_ws_endpoint = "wss://api.mainnet-beta.solana.com/"
-    try:
-        async with connect(solana_ws_endpoint) as client:
-            # Subscribe ke perubahan akun Solana
-            await client.account_subscribe(PublicKey(account_pubkey_str))
-            print(f"Mulai monitoring akun Solana: {account_pubkey_str}")
-            while True:
-                try:
-                    msg = await client.recv()
-                    message = f"[Solana] Notifikasi untuk {account_pubkey_str}:\n{msg}"
-                    print(message)
-                    send_telegram_message(message)
-                except Exception as e:
-                    print("Error pada Solana:", e)
-                    await asyncio.sleep(5)
-    except Exception as e:
-        print(f"Gagal terhubung ke Solana untuk {account_pubkey_str}: {e}")
-
-def start_solana_monitor(wallet_address):
-    asyncio.run(monitor_solana(wallet_address))
 
 ###############################
 # Bot Telegram: Command Handler
@@ -175,12 +142,6 @@ def add_wallet(message):
             if wallet not in wallet_addresses[chain]:
                 wallet_addresses[chain].append(wallet)
         bot.reply_to(message, f"Wallet {wallet} telah ditambahkan untuk {chain}.")
-        # Untuk Solana, mulai monitoring wallet tersebut jika belum berjalan
-        if chain == "Solana":
-            if wallet not in solana_threads:
-                t = threading.Thread(target=start_solana_monitor, args=(wallet,), daemon=True)
-                t.start()
-                solana_threads[wallet] = t
     except Exception as e:
         bot.reply_to(message, f"Error: {e}")
 
@@ -202,9 +163,6 @@ def remove_wallet(message):
                 bot.reply_to(message, f"Wallet {wallet} telah dihapus dari {chain}.")
             else:
                 bot.reply_to(message, f"Wallet {wallet} tidak ditemukan pada {chain}.")
-        # Catatan: Untuk Solana, penghentian thread monitoring tidak didukung secara dinamis.
-        if chain == "Solana" and wallet in solana_threads:
-            bot.reply_to(message, "Catatan: Penghentian monitoring Solana tidak didukung secara dinamis. Bot harus direstart untuk menghentikannya.")
     except Exception as e:
         bot.reply_to(message, f"Error: {e}")
 
@@ -233,10 +191,8 @@ def add_network(message):
                 bot.reply_to(message, f"Network {chain} sudah ada.")
                 return
             networks[chain] = rpc_url
-        # Tambahkan entry untuk wallet pada network baru
         with wallet_lock:
             wallet_addresses[chain] = []
-        # Mulai thread monitoring untuk network baru (asumsi jaringan ini adalah EVM)
         t = threading.Thread(target=monitor_network, args=(chain, rpc_url), daemon=True)
         t.start()
         bot.reply_to(message, f"Network {chain} berhasil ditambahkan dan monitoring dimulai.")
@@ -254,13 +210,10 @@ def list_networks(message):
 #########################
 # Main Program          #
 #########################
-
 if __name__ == '__main__':
-    # Memulai monitoring untuk jaringan EVM yang sudah ada di dictionary 'networks'
     with network_lock:
         for network_name, rpc_url in networks.items():
             t = threading.Thread(target=monitor_network, args=(network_name, rpc_url), daemon=True)
             t.start()
-    
     print("Bot Telegram mulai polling...")
     bot.infinity_polling()
