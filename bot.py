@@ -5,7 +5,7 @@ from web3 import Web3
 import telebot
 from dotenv import load_dotenv
 
-# Load environment variables dari file .env
+# Muat variabel lingkungan dari file .env
 load_dotenv()
 
 #########################
@@ -13,11 +13,11 @@ load_dotenv()
 #########################
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 if not TELEGRAM_BOT_TOKEN:
-    raise Exception("TELEGRAM_BOT_TOKEN belum diset di file .env. Pastikan token valid.")
+    raise Exception("TELEGRAM_BOT_TOKEN belum diset di file .env")
     
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 
-# Menyimpan chat id yang aktif (untuk auto alert) di memori
+# Menyimpan chat id yang aktif (untuk auto alert) secara in-memory
 active_chats_lock = threading.Lock()
 active_chats = set()
 
@@ -32,20 +32,19 @@ def send_telegram_message(message):
 #########################
 # Konfigurasi Jaringan  #
 #########################
-# Untuk Ethereum, gunakan Alchemy RPC. Jika ETHEREUM_RPC tidak diset, maka buat default menggunakan ALCHEMY_API_KEY.
+# Gunakan Alchemy RPC untuk Ethereum; jika variabel ETHEREUM_RPC tidak diset, buat default menggunakan ALCHEMY_API_KEY.
 networks = {
-    "Ethereum": os.getenv('ETHEREUM_RPC', f"https://eth-mainnet.alchemyapi.io/v2/{os.getenv('ALCHEMY_API_KEY')}"),
+    "Ethereum": os.getenv('ETHEREUM_RPC', f"https://eth-mainnet.g.alchemy.com/v2/{os.getenv('ALCHEMY_API_KEY')}"),
     "BSC": os.getenv('BSC_RPC', "https://bsc-dataseed.binance.org/"),
     "Arbitrum": os.getenv('ARBITRUM_RPC', "https://arb1.arbitrum.io/rpc"),
     "Base": os.getenv('BASE_RPC', "https://base-mainnet.chainbase.online")
 }
-# Lock untuk modifikasi dictionary networks
 network_lock = threading.Lock()
 
 #############################################
 # Global Data: Daftar Wallet yang Dipantau  #
 #############################################
-# Menyimpan wallet per chain
+# Menyimpan wallet untuk masing-masing chain
 wallet_lock = threading.Lock()
 wallet_addresses = {
     "Ethereum": [],
@@ -66,18 +65,17 @@ def handle_event(event, network_name):
 def monitor_network(network_name, rpc_url):
     w3 = Web3(Web3.HTTPProvider(rpc_url))
     if not w3.is_connected():
-        print(f"Gagal terhubung ke {network_name} dengan RPC: {rpc_url}")
+        print(f"Gagal terhubung ke {network_name} menggunakan RPC: {rpc_url}")
         return
     print(f"Mulai monitoring {network_name}...")
     while True:
         with wallet_lock:
-            # Ambil daftar wallet untuk network ini (bisa saja kosong)
             addresses = wallet_addresses.get(network_name, [])
         if addresses:
             try:
-                # Membuat filter log untuk seluruh wallet yang ada di list
+                # Membuat filter log untuk wallet yang didaftarkan pada network ini
                 event_filter = w3.eth.filter({"address": addresses})
-                time.sleep(5)  # Delay polling 5 detik
+                time.sleep(5)  # Polling setiap 5 detik
                 events = event_filter.get_new_entries()
                 for event in events:
                     handle_event(event, network_name)
