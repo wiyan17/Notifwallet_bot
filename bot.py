@@ -13,8 +13,8 @@ load_dotenv()
 #########################
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 if not TELEGRAM_BOT_TOKEN:
-    raise Exception("TELEGRAM_BOT_TOKEN belum diset di file .env")
-
+    raise Exception("TELEGRAM_BOT_TOKEN belum diset di file .env. Pastikan token valid.")
+    
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 
 # Menyimpan chat id yang aktif (untuk auto alert) di memori
@@ -65,8 +65,8 @@ def handle_event(event, network_name):
 
 def monitor_network(network_name, rpc_url):
     w3 = Web3(Web3.HTTPProvider(rpc_url))
-    if not w3.isConnected():
-        print(f"Gagal terhubung ke {network_name}")
+    if not w3.is_connected():
+        print(f"Gagal terhubung ke {network_name} dengan RPC: {rpc_url}")
         return
     print(f"Mulai monitoring {network_name}...")
     while True:
