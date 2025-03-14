@@ -35,10 +35,9 @@ def send_telegram_message(message):
 #########################
 # Konfigurasi Jaringan  #
 #########################
-
-# Ambil endpoint RPC dari .env atau gunakan default jika tidak diset
+# Untuk Ethereum, gunakan Alchemy RPC. Jika ETHEREUM_RPC tidak diset, maka buat default menggunakan ALCHEMY_API_KEY.
 networks = {
-    "Ethereum": os.getenv('ETHEREUM_RPC', f"https://mainnet.infura.io/v3/{os.getenv('INFURA_PROJECT_ID')}"),
+    "Ethereum": os.getenv('ETHEREUM_RPC', f"https://eth-mainnet.alchemyapi.io/v2/{os.getenv('ALCHEMY_API_KEY')}"),
     "BSC": os.getenv('BSC_RPC', "https://bsc-dataseed.binance.org/"),
     "Arbitrum": os.getenv('ARBITRUM_RPC', "https://arb1.arbitrum.io/rpc"),
     "Base": os.getenv('BASE_RPC', "https://base-mainnet.chainbase.online")
